@@ -1,14 +1,15 @@
 /**
- * Gemini API integration for virtual try-on image generation.
+ * Virtual try-on image generation via fal.ai.
  *
- * SDK: @google/genai (new unified Google Gen AI SDK)
- * Model: gemini-3.1-flash-image — supports image input + image output.
- * To switch to a pro model, change GEMINI_MODEL to "gemini-3-pro-image".
+ * Model: fal-ai/gemini-25-flash-image/edit
+ * Docs:  https://fal.ai/models/fal-ai/gemini-25-flash-image/edit/api
+ *
+ * To switch to a different model, change FAL_IMAGE_MODEL below.
  */
 
-import { GoogleGenAI } from "@google/genai";
+import { fal } from "@fal-ai/client";
 
-export const GEMINI_MODEL = "gemini-3.1-flash-image";
+export const FAL_IMAGE_MODEL = "fal-ai/gemini-25-flash-image/edit";
 
 export interface TryOnInput {
   modelFrontBase64: string;
@@ -29,18 +30,32 @@ export interface TryOnResult {
   backMimeType: string;
 }
 
-function getClient(): GoogleGenAI {
-  const apiKey = process.env.GEMINI_API_KEY;
+function configureClient() {
+  const apiKey = process.env.FAL_KEY;
   if (!apiKey) {
     throw new Error(
-      "GEMINI_API_KEY is not set. Add it to .env.local or Vercel environment variables."
+      "FAL_KEY is not set. Add it to .env.local or Vercel environment variables."
     );
   }
-  return new GoogleGenAI({ apiKey });
+  fal.config({ credentials: apiKey });
+}
+
+function toDataUrl(base64: string, mimeType: string): string {
+  return `data:${mimeType};base64,${base64}`;
+}
+
+async function urlToBase64(
+  url: string
+): Promise<{ base64: string; mimeType: string }> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Не вдалося завантажити результат: ${url}`);
+  const mimeType = res.headers.get("content-type") ?? "image/png";
+  const arrayBuffer = await res.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+  return { base64, mimeType };
 }
 
 async function generateSingleTryOn(
-  ai: GoogleGenAI,
   modelImageBase64: string,
   modelMimeType: string,
   clothImageBase64: string,
@@ -50,59 +65,39 @@ async function generateSingleTryOn(
 ): Promise<{ base64: string; mimeType: string }> {
   const sideLabel = side === "front" ? "спереду" : "ззаду";
 
-  const response = await ai.models.generateContent({
-    model: GEMINI_MODEL,
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            inlineData: {
-              mimeType: modelMimeType,
-              data: modelImageBase64,
-            },
-          },
-          {
-            inlineData: {
-              mimeType: clothMimeType,
-              data: clothImageBase64,
-            },
-          },
-          {
-            text: `ПЕРШЕ ФОТО: модель ${sideLabel}. ДРУГЕ ФОТО: одяг ${sideLabel}.\n\n${prompt}`,
-          },
-        ],
-      },
-    ],
-    config: {
-      responseModalities: ["TEXT", "IMAGE"],
+  const result = await fal.subscribe(FAL_IMAGE_MODEL, {
+    input: {
+      prompt: `ПЕРШЕ ФОТО: модель ${sideLabel}. ДРУГЕ ФОТО: одяг ${sideLabel}.\n\n${prompt}`,
+      image_urls: [
+        toDataUrl(modelImageBase64, modelMimeType),
+        toDataUrl(clothImageBase64, clothMimeType),
+      ],
+      num_images: 1,
+      output_format: "png",
     },
+    logs: false,
   });
 
-  const parts = response.candidates?.[0]?.content?.parts ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = result.data as any;
+  const imageUrl: string | undefined = data?.images?.[0]?.url;
 
-  for (const part of parts) {
-    if (part.inlineData?.data) {
-      return {
-        base64: part.inlineData.data,
-        mimeType: part.inlineData.mimeType ?? "image/png",
-      };
-    }
+  if (!imageUrl) {
+    throw new Error(
+      `fal.ai не повернув зображення для ракурсу "${sideLabel}". Відповідь: ${JSON.stringify(data)}`
+    );
   }
 
-  throw new Error(
-    `Gemini не повернув зображення для ракурсу "${sideLabel}". Модель: ${GEMINI_MODEL}`
-  );
+  return await urlToBase64(imageUrl);
 }
 
 export async function generateTryOnImages(
   input: TryOnInput
 ): Promise<TryOnResult> {
-  const ai = getClient();
+  configureClient();
 
   const [front, back] = await Promise.all([
     generateSingleTryOn(
-      ai,
       input.modelFrontBase64,
       input.modelFrontMimeType,
       input.clothFrontBase64,
@@ -111,7 +106,6 @@ export async function generateTryOnImages(
       "front"
     ),
     generateSingleTryOn(
-      ai,
       input.modelBackBase64,
       input.modelBackMimeType,
       input.clothBackBase64,
