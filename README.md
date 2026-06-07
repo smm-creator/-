@@ -1,36 +1,159 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FIT VIDEO GENERATOR
 
-## Getting Started
+Повноцінний вебзастосунок для генерації fit video / відео з приміркою одягу.
 
-First, run the development server:
+**Етап 1** — Перевдягання фото через Google Gemini AI  
+**Етап 2** — Генерація відео через Seedance 2.0 (via fal.ai)
+
+---
+
+## Стек технологій
+
+- **Next.js 15** (App Router)
+- **React 19 + TypeScript**
+- **Tailwind CSS v4**
+- **Google Generative AI SDK** (`@google/generative-ai`)
+- **fal.ai Client** (`@fal-ai/client`)
+
+---
+
+## Швидкий старт
+
+### 1. Встановлення залежностей
+
+```bash
+npm install
+```
+
+### 2. Створення `.env.local`
+
+Скопіюйте `.env.example` і заповніть реальними ключами:
+
+```bash
+cp .env.example .env.local
+```
+
+Відкрийте `.env.local` та вставте ваші ключі:
+
+```env
+GEMINI_API_KEY=ваш_gemini_ключ
+FAL_KEY=ваш_fal_ключ
+```
+
+### 3. Де отримати API ключі
+
+| Сервіс | Де отримати |
+|--------|------------|
+| **GEMINI_API_KEY** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) — безкоштовно з лімітами |
+| **FAL_KEY** | [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys) — потрібна реєстрація та поповнення балансу |
+
+### 4. Запуск локально
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Відкрийте [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 5. Production build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Деплой на Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Крок 1 — Push на GitHub
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+git add .
+git commit -m "feat: fit video generator"
+git push origin main
+```
 
-## Deploy on Vercel
+### Крок 2 — Підключення до Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Зайдіть на [vercel.com](https://vercel.com)
+2. Натисніть **Add New → Project**
+3. Імпортуйте ваш GitHub репозиторій
+4. Натисніть **Deploy**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Крок 3 — Змінні середовища у Vercel
+
+У Vercel Dashboard → **Settings → Environment Variables** додайте:
+
+| Ключ | Значення |
+|------|---------|
+| `GEMINI_API_KEY` | ваш Gemini API ключ |
+| `FAL_KEY` | ваш fal.ai API ключ |
+
+> ⚠️ **Важливо**: Ніколи не комітьте `.env.local` у git репозиторій.
+
+---
+
+## Структура проєкту
+
+```
+app/
+  page.tsx                    # Головна сторінка (UI)
+  layout.tsx                  # Кореневий layout
+  globals.css                 # Глобальні стилі (чорно-червона тема)
+  api/
+    gemini-tryon/
+      route.ts                # POST /api/gemini-tryon
+    seedance-video/
+      route.ts                # POST /api/seedance-video
+
+components/
+  FileUpload.tsx              # Компонент завантаження фото (drag & drop)
+  ImagePreview.tsx            # Перегляд та завантаження результату
+  PromptBox.tsx               # Textarea для промптів
+  StepCard.tsx                # Картка кроку з індикатором статусу
+  VideoPreview.tsx            # Відео + YouTube посилання
+
+lib/
+  gemini.ts                   # Інтеграція з Gemini API
+  seedance.ts                 # Інтеграція з Seedance via fal.ai
+  utils.ts                    # Утиліти (base64, download, validation)
+```
+
+---
+
+## Зміна моделі Gemini або Seedance
+
+### Gemini модель
+
+Відкрийте `lib/gemini.ts` і змініть константу:
+
+```typescript
+export const GEMINI_MODEL = "gemini-2.0-flash-exp-image-generation";
+```
+
+### Seedance модель (fal.ai slug)
+
+Відкрийте `lib/seedance.ts` і змініть константу:
+
+```typescript
+export const SEEDANCE_MODEL = "fal-ai/bytedance/seedance-1-5-image-to-video";
+```
+
+Актуальні моделі fal.ai: [fal.ai/models](https://fal.ai/models)
+
+---
+
+## Ліміти файлів
+
+- Максимальний розмір: **10 МБ** на фото
+- Формати: **JPG, PNG, WEBP**
+
+---
+
+## Змінні середовища
+
+| Змінна | Обов'язкова | Опис |
+|--------|-------------|------|
+| `GEMINI_API_KEY` | ✅ | Google AI Studio API ключ |
+| `FAL_KEY` | ✅ | fal.ai API ключ для Seedance |
