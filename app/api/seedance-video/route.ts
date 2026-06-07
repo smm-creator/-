@@ -4,7 +4,7 @@ import { generateSeedanceVideo } from "@/lib/seedance";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-function isDataUrl(value: unknown) {
+function isDataUrl(value: unknown): value is string {
   return typeof value === "string" && /^data:image\/(png|jpeg|jpg|webp);base64,/.test(value);
 }
 
