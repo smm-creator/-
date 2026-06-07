@@ -1,14 +1,14 @@
 /**
  * Gemini API integration for virtual try-on image generation.
  *
- * Uses gemini-2.0-flash-exp with image generation capability (responseModalities: ["IMAGE", "TEXT"]).
- * If Google releases a dedicated try-on endpoint or an updated model, change GEMINI_MODEL below.
+ * SDK: @google/genai (new unified Google Gen AI SDK)
+ * Model: gemini-3.1-flash-image — supports image input + image output.
+ * To switch to a pro model, change GEMINI_MODEL to "gemini-3-pro-image".
  */
 
-import { GoogleGenerativeAI, Part } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-// Change model here if Google releases a more capable image-generation model
-export const GEMINI_MODEL = "gemini-2.0-flash-exp-image-generation";
+export const GEMINI_MODEL = "gemini-3.1-flash-image";
 
 export interface TryOnInput {
   modelFrontBase64: string;
@@ -29,18 +29,18 @@ export interface TryOnResult {
   backMimeType: string;
 }
 
-function getClient(): GoogleGenerativeAI {
+function getClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error(
       "GEMINI_API_KEY is not set. Add it to .env.local or Vercel environment variables."
     );
   }
-  return new GoogleGenerativeAI(apiKey);
+  return new GoogleGenAI({ apiKey });
 }
 
 async function generateSingleTryOn(
-  client: GoogleGenerativeAI,
+  ai: GoogleGenAI,
   modelImageBase64: string,
   modelMimeType: string,
   clothImageBase64: string,
@@ -48,61 +48,61 @@ async function generateSingleTryOn(
   prompt: string,
   side: "front" | "back"
 ): Promise<{ base64: string; mimeType: string }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const model = (client.getGenerativeModel as any)({
+  const sideLabel = side === "front" ? "спереду" : "ззаду";
+
+  const response = await ai.models.generateContent({
     model: GEMINI_MODEL,
-    generationConfig: {
-      responseModalities: ["IMAGE", "TEXT"],
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            inlineData: {
+              mimeType: modelMimeType,
+              data: modelImageBase64,
+            },
+          },
+          {
+            inlineData: {
+              mimeType: clothMimeType,
+              data: clothImageBase64,
+            },
+          },
+          {
+            text: `ПЕРШЕ ФОТО: модель ${sideLabel}. ДРУГЕ ФОТО: одяг ${sideLabel}.\n\n${prompt}`,
+          },
+        ],
+      },
+    ],
+    config: {
+      responseModalities: ["TEXT", "IMAGE"],
     },
   });
 
-  const sideLabel = side === "front" ? "спереду" : "ззаду";
+  const parts = response.candidates?.[0]?.content?.parts ?? [];
 
-  const parts: Part[] = [
-    {
-      inlineData: {
-        data: modelImageBase64,
-        mimeType: modelMimeType as "image/jpeg" | "image/png" | "image/webp",
-      },
-    },
-    {
-      inlineData: {
-        data: clothImageBase64,
-        mimeType: clothMimeType as "image/jpeg" | "image/png" | "image/webp",
-      },
-    },
-    {
-      text: `ПЕРШЕ ФОТО: модель ${sideLabel}. ДРУГЕ ФОТО: одяг ${sideLabel}.\n\n${prompt}`,
-    },
-  ];
-
-  const result = await model.generateContent(parts);
-  const response = result.response;
-
-  for (const candidate of response.candidates ?? []) {
-    for (const part of candidate.content?.parts ?? []) {
-      if (part.inlineData?.data) {
-        return {
-          base64: part.inlineData.data,
-          mimeType: part.inlineData.mimeType ?? "image/png",
-        };
-      }
+  for (const part of parts) {
+    if (part.inlineData?.data) {
+      return {
+        base64: part.inlineData.data,
+        mimeType: part.inlineData.mimeType ?? "image/png",
+      };
     }
   }
 
   throw new Error(
-    `Gemini не повернув зображення для ракурсу "${sideLabel}". Перевірте модель ${GEMINI_MODEL} та API ключ.`
+    `Gemini не повернув зображення для ракурсу "${sideLabel}". Модель: ${GEMINI_MODEL}`
   );
 }
 
 export async function generateTryOnImages(
   input: TryOnInput
 ): Promise<TryOnResult> {
-  const client = getClient();
+  const ai = getClient();
 
   const [front, back] = await Promise.all([
     generateSingleTryOn(
-      client,
+      ai,
       input.modelFrontBase64,
       input.modelFrontMimeType,
       input.clothFrontBase64,
@@ -111,7 +111,7 @@ export async function generateTryOnImages(
       "front"
     ),
     generateSingleTryOn(
-      client,
+      ai,
       input.modelBackBase64,
       input.modelBackMimeType,
       input.clothBackBase64,
