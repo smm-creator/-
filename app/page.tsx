@@ -381,30 +381,32 @@ export default function Home() {
           isActive={!!geminiResult && !videoUrl}
           isCompleted={!!videoUrl}
         >
-          {!geminiResult ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-gray-400 text-sm">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-              Спочатку завершіть Крок 1
-            </div>
-          ) : (
-            <div className="flex flex-col gap-6">
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Вхідні фото з Gemini</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "Спереду", b64: geminiResult.frontBase64, mime: geminiResult.frontMimeType },
-                    { label: "Ззаду", b64: geminiResult.backBase64, mime: geminiResult.backMimeType },
-                  ].map((item) => (
-                    <div key={item.label} className="rounded-xl overflow-hidden border border-gray-200">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`data:${item.mime};base64,${item.b64}`} alt={item.label} className="w-full h-28 object-contain bg-gray-50" />
-                      <p className="text-xs text-gray-500 text-center py-1.5 border-t border-gray-100">{item.label}</p>
-                    </div>
-                  ))}
+          <div className="flex flex-col gap-6">
+
+              {geminiResult ? (
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Вхідні фото з Gemini</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { label: "Спереду", b64: geminiResult.frontBase64, mime: geminiResult.frontMimeType },
+                      { label: "Ззаду", b64: geminiResult.backBase64, mime: geminiResult.backMimeType },
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-xl overflow-hidden border border-gray-200">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`data:${item.mime};base64,${item.b64}`} alt={item.label} className="w-full h-28 object-contain bg-gray-50" />
+                        <p className="text-xs text-gray-500 text-center py-1.5 border-t border-gray-100">{item.label}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-xs text-gray-400">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  Фото з'являться тут після завершення Кроку 1
+                </div>
+              )}
 
               <PromptBox
                 label="Промпт для Seedance 2.0"
@@ -445,7 +447,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handleGenerateSeedance}
-                  disabled={seedanceLoading || !seedancePrompt.trim()}
+                  disabled={!geminiResult || seedanceLoading || !seedancePrompt.trim()}
                   className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-gray-900 text-white rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-30"
                 >
                   {seedanceLoading ? (
@@ -496,7 +498,6 @@ export default function Home() {
                 />
               )}
             </div>
-          )}
         </StepCard>
       </main>
 
