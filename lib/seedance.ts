@@ -50,7 +50,7 @@ export async function generateFitVideo(
       end_image_url: toDataUrl(input.backImageBase64, input.backMimeType),
       resolution: "720p",
       duration: "12",
-      aspect_ratio: "9:16",
+      aspect_ratio: "auto",
       generate_audio: false,
     },
     logs: false,

@@ -74,6 +74,7 @@ async function generateSingleTryOn(
       ],
       num_images: 1,
       output_format: "png",
+      aspect_ratio: "4:5",
     },
     logs: false,
   });
