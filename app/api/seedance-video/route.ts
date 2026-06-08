@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateFitVideo } from "@/lib/seedance";
+import { extractErrorMessage } from "@/lib/utils";
 
 export const maxDuration = 300;
 
@@ -7,13 +8,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const {
-      frontImageBase64,
-      backImageBase64,
-      frontMimeType,
-      backMimeType,
-      prompt,
-    } = body;
+    const { frontImageBase64, backImageBase64, frontMimeType, backMimeType, prompt } = body;
 
     if (!frontImageBase64 || !backImageBase64) {
       return NextResponse.json(
@@ -40,8 +35,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ videoUrl: result.videoUrl });
   } catch (error) {
     console.error("[seedance-video] Error:", error);
-    const message =
-      error instanceof Error ? error.message : "Невідома помилка сервера";
+    const message = extractErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

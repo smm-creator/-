@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateTryOnImages } from "@/lib/gemini";
+import { extractErrorMessage } from "@/lib/utils";
 
 export const maxDuration = 120;
 
@@ -19,12 +20,7 @@ export async function POST(request: NextRequest) {
       prompt,
     } = body;
 
-    if (
-      !modelFrontBase64 ||
-      !modelBackBase64 ||
-      !clothFrontBase64 ||
-      !clothBackBase64
-    ) {
+    if (!modelFrontBase64 || !modelBackBase64 || !clothFrontBase64 || !clothBackBase64) {
       return NextResponse.json(
         { error: "Необхідно надати всі 4 фотографії" },
         { status: 400 }
@@ -58,8 +54,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("[gemini-tryon] Error:", error);
-    const message =
-      error instanceof Error ? error.message : "Невідома помилка сервера";
+    const message = extractErrorMessage(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

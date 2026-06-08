@@ -1,7 +1,6 @@
 export const MAX_FILE_SIZE_MB = 10;
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 export const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
-export const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"];
 
 export function validateImageFile(file: File): string | null {
   if (!ALLOWED_MIME_TYPES.includes(file.type)) {
@@ -18,7 +17,6 @@ export function fileToBase64(file: File): Promise<string> {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      // Strip the data URL prefix, keep only base64 data
       const base64 = result.split(",")[1];
       resolve(base64);
     };
@@ -76,4 +74,38 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 
 export function cn(...classes: (string | undefined | false | null)[]): string {
   return classes.filter(Boolean).join(" ");
+}
+
+/**
+ * Extracts a human-readable message from any thrown value.
+ * Handles: Error instances, fal.ai ApiError (which stores details in .body),
+ * plain objects, and strings.
+ */
+export function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    // fal.ai ApiError has a .body property with API details
+    const body = (error as Error & { body?: unknown; status?: number }).body;
+    if (body) {
+      if (typeof body === "string") return body;
+      if (typeof body === "object" && body !== null) {
+        const b = body as Record<string, unknown>;
+        const detail =
+          b.detail ?? b.message ?? b.error ?? b.msg ?? b.reason;
+        if (detail) {
+          if (typeof detail === "string") return detail;
+          return JSON.stringify(detail);
+        }
+        return JSON.stringify(body);
+      }
+    }
+    if (error.message && error.message !== "[object Object]") {
+      return error.message;
+    }
+    return "Помилка сервера fal.ai. Перевірте FAL_KEY та баланс на рахунку.";
+  }
+  if (typeof error === "string") return error;
+  if (typeof error === "object" && error !== null) {
+    return JSON.stringify(error);
+  }
+  return "Невідома помилка";
 }
