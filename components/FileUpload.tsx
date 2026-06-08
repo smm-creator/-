@@ -30,10 +30,7 @@ export default function FileUpload({
     async (file: File) => {
       setError(null);
       const validationError = validateImageFile(file);
-      if (validationError) {
-        setError(validationError);
-        return;
-      }
+      if (validationError) { setError(validationError); return; }
       try {
         const url = await fileToDataUrl(file);
         onChange(file, url);
@@ -55,114 +52,81 @@ export default function FileUpload({
     [disabled, handleFile]
   );
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (!disabled) setIsDragging(true);
-  };
-
-  const handleDragLeave = () => setIsDragging(false);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleFile(file);
-    e.target.value = "";
-  };
-
   return (
-    <div className="flex flex-col gap-2">
-      <label
-        className="text-xs font-bold tracking-widest text-gray-400 uppercase"
-        style={{ letterSpacing: "0.15em" }}
-      >
-        {label}
-      </label>
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-semibold text-gray-800">{label}</label>
+      {description && <p className="text-xs text-gray-400 -mt-1">{description}</p>}
 
       {previewUrl ? (
-        <div className="relative group tactical-border rounded overflow-hidden" style={{ background: "#0a0a0a" }}>
+        <div className="relative group rounded-xl overflow-hidden border border-gray-200">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={previewUrl}
-            alt={label}
-            className="w-full h-48 object-contain"
-            style={{ background: "#111" }}
-          />
-          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+          <img src={previewUrl} alt={label} className="w-full h-44 object-contain bg-gray-50" />
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
             <button
               type="button"
               onClick={() => !disabled && inputRef.current?.click()}
               disabled={disabled}
-              className="px-3 py-1 text-xs font-bold tracking-wider border border-gray-500 text-gray-200 hover:border-red-500 hover:text-red-400 transition-colors"
+              className="px-3 py-1.5 text-xs font-semibold bg-white text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              ЗАМІНИТИ
+              Замінити
             </button>
             <button
               type="button"
               onClick={() => { setError(null); onClear(); }}
               disabled={disabled}
-              className="px-3 py-1 text-xs font-bold tracking-wider border border-gray-600 text-gray-400 hover:border-red-600 hover:text-red-500 transition-colors"
+              className="px-3 py-1.5 text-xs font-semibold bg-white text-red-600 rounded-lg hover:bg-red-50 transition-colors"
             >
-              ВИДАЛИТИ
+              Видалити
             </button>
           </div>
           {value && (
-            <div className="absolute bottom-0 left-0 right-0 bg-black/80 px-2 py-1 flex items-center justify-between">
-              <span className="text-xs text-gray-400 truncate">{value.name}</span>
-              <span className="text-xs text-gray-500 ml-2 shrink-0">{formatFileSize(value.size)}</span>
+            <div className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm px-3 py-1.5 flex items-center justify-between">
+              <span className="text-xs text-gray-600 truncate">{value.name}</span>
+              <span className="text-xs text-gray-400 ml-2 shrink-0">{formatFileSize(value.size)}</span>
             </div>
           )}
-          <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
         </div>
       ) : (
         <div
           onClick={() => !disabled && inputRef.current?.click()}
           onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
+          onDragOver={(e) => { e.preventDefault(); if (!disabled) setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
           className={cn(
-            "relative h-48 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all tactical-border rounded",
-            isDragging
-              ? "border-red-500 bg-red-950/20"
-              : "hover:border-red-800",
+            "h-44 flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed cursor-pointer transition-all",
+            isDragging ? "border-gray-400 bg-gray-50" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50",
             disabled && "opacity-40 cursor-not-allowed"
           )}
-          style={{ background: "#0d0d0d" }}
         >
           <div className={cn(
-            "w-10 h-10 flex items-center justify-center border-2 rounded transition-colors",
-            isDragging ? "border-red-500 text-red-500" : "border-gray-600 text-gray-500"
+            "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+            isDragging ? "bg-gray-200" : "bg-gray-100"
           )}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
           </div>
-          <div className="text-center">
-            <p className="text-xs font-bold text-gray-400 tracking-wider">
-              {isDragging ? "ВІДПУСТІТЬ ФАЙЛ" : "ПЕРЕТЯГНІТЬ АБО НАТИСНІТЬ"}
+          <div className="text-center px-4">
+            <p className="text-sm font-medium text-gray-700">
+              {isDragging ? "Відпустіть файл" : "Перетягніть або натисніть"}
             </p>
-            {description && (
-              <p className="text-xs text-gray-600 mt-1">{description}</p>
-            )}
-            <p className="text-xs text-gray-600 mt-1">JPG / PNG / WEBP · макс. 10 МБ</p>
+            <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WEBP · до 10 МБ</p>
           </div>
         </div>
       )}
 
       {error && (
-        <p className="text-xs text-red-400 flex items-center gap-1">
-          <span>⚠</span> {error}
+        <p className="text-xs text-red-500 flex items-center gap-1">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          {error}
         </p>
       )}
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={handleInputChange}
-        disabled={disabled}
-      />
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} disabled={disabled} />
     </div>
   );
 }

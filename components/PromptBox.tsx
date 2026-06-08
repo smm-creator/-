@@ -20,10 +20,8 @@ export default function PromptBox({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-bold tracking-widest text-gray-400 uppercase" style={{ letterSpacing: "0.15em" }}>
-          {label}
-        </label>
-        <span className="text-xs text-gray-600 font-mono">{value.length} симв.</span>
+        <label className="text-sm font-semibold text-gray-800">{label}</label>
+        <span className="text-xs text-gray-400">{value.length} символів</span>
       </div>
       <textarea
         value={value}
@@ -31,22 +29,10 @@ export default function PromptBox({
         disabled={disabled}
         rows={rows}
         placeholder={placeholder}
-        className="w-full px-3 py-2.5 text-sm rounded resize-none font-mono leading-relaxed"
-        style={{
-          background: "#0d0d0d",
-          color: "#d1d5db",
-          border: "1px solid #2a2a2a",
-          outline: "none",
-          transition: "border-color 0.2s, box-shadow 0.2s",
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = "#dc2626";
-          e.currentTarget.style.boxShadow = "0 0 0 2px rgba(220, 38, 38, 0.15)";
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = "#2a2a2a";
-          e.currentTarget.style.boxShadow = "none";
-        }}
+        className="w-full px-4 py-3 text-sm leading-relaxed resize-none"
+        style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px", outline: "none", color: "#111", transition: "border-color 0.15s, box-shadow 0.15s" }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = "#111"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(17,17,17,0.07)"; }}
+        onBlur={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.boxShadow = "none"; }}
       />
     </div>
   );
