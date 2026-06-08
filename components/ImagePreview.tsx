@@ -1,14 +1,17 @@
 "use client";
 
-import { downloadFromUrl } from "@/lib/utils";
+import { downloadBase64Image } from "@/lib/utils";
 
 interface ImagePreviewProps {
   label: string;
-  src: string;
+  base64: string;
+  mimeType: string;
   filename?: string;
 }
 
-export default function ImagePreview({ label, src, filename = "result.png" }: ImagePreviewProps) {
+export default function ImagePreview({ label, base64, mimeType, filename = "result.png" }: ImagePreviewProps) {
+  const src = `data:${mimeType};base64,${base64}`;
+
   return (
     <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
@@ -22,7 +25,7 @@ export default function ImagePreview({ label, src, filename = "result.png" }: Im
       <div className="px-4 py-2.5 border-t border-gray-100 flex justify-end">
         <button
           type="button"
-          onClick={() => downloadFromUrl(src, filename)}
+          onClick={() => downloadBase64Image(base64, mimeType, filename)}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

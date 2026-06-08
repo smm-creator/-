@@ -4,8 +4,8 @@
  * Model: fal-ai/gemini-25-flash-image/edit
  * Docs:  https://fal.ai/models/fal-ai/gemini-25-flash-image/edit/api
  *
- * Returns fal.ai CDN URLs (https://...) instead of base64 to keep
- * response payloads small and avoid Vercel 4.5 MB body size limits.
+ * Returns both base64 (for browser display/download) and the CDN URL
+ * (for passing directly to Seedance without re-uploading).
  */
 
 import { fal } from "@fal-ai/client";
@@ -25,6 +25,10 @@ export interface TryOnInput {
 }
 
 export interface TryOnResult {
+  frontBase64: string;
+  backBase64: string;
+  frontMimeType: string;
+  backMimeType: string;
   frontUrl: string;
   backUrl: string;
 }
@@ -43,6 +47,15 @@ function toDataUrl(base64: string, mimeType: string): string {
   return `data:${mimeType};base64,${base64}`;
 }
 
+async function urlToBase64(url: string): Promise<{ base64: string; mimeType: string }> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Не вдалося завантажити результат: ${url}`);
+  const mimeType = res.headers.get("content-type") ?? "image/png";
+  const arrayBuffer = await res.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+  return { base64, mimeType };
+}
+
 async function generateSingleTryOn(
   modelImageBase64: string,
   modelMimeType: string,
@@ -50,7 +63,7 @@ async function generateSingleTryOn(
   clothMimeType: string,
   prompt: string,
   side: "front" | "back"
-): Promise<string> {
+): Promise<{ base64: string; mimeType: string; url: string }> {
   const sideLabel = side === "front" ? "спереду" : "ззаду";
 
   const result = await fal.subscribe(FAL_IMAGE_MODEL, {
@@ -77,32 +90,32 @@ async function generateSingleTryOn(
     );
   }
 
-  return imageUrl;
+  const { base64, mimeType } = await urlToBase64(imageUrl);
+  return { base64, mimeType, url: imageUrl };
 }
 
-export async function generateTryOnImages(
-  input: TryOnInput
-): Promise<TryOnResult> {
+export async function generateTryOnImages(input: TryOnInput): Promise<TryOnResult> {
   configureClient();
 
-  const [frontUrl, backUrl] = await Promise.all([
+  const [front, back] = await Promise.all([
     generateSingleTryOn(
-      input.modelFrontBase64,
-      input.modelFrontMimeType,
-      input.clothFrontBase64,
-      input.clothFrontMimeType,
-      input.prompt,
-      "front"
+      input.modelFrontBase64, input.modelFrontMimeType,
+      input.clothFrontBase64, input.clothFrontMimeType,
+      input.prompt, "front"
     ),
     generateSingleTryOn(
-      input.modelBackBase64,
-      input.modelBackMimeType,
-      input.clothBackBase64,
-      input.clothBackMimeType,
-      input.prompt,
-      "back"
+      input.modelBackBase64, input.modelBackMimeType,
+      input.clothBackBase64, input.clothBackMimeType,
+      input.prompt, "back"
     ),
   ]);
 
-  return { frontUrl, backUrl };
+  return {
+    frontBase64: front.base64,
+    backBase64: back.base64,
+    frontMimeType: front.mimeType,
+    backMimeType: back.mimeType,
+    frontUrl: front.url,
+    backUrl: back.url,
+  };
 }
