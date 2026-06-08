@@ -16,6 +16,7 @@ export interface SeedanceInput {
   frontImageUrl: string;
   backImageUrl: string;
   prompt: string;
+  duration?: string;
 }
 
 export interface SeedanceResult {
@@ -43,7 +44,7 @@ export async function generateFitVideo(
       image_url: input.frontImageUrl,
       end_image_url: input.backImageUrl,
       resolution: "720p",
-      duration: "8",
+      duration: input.duration ?? "8",
       aspect_ratio: "auto",
       generate_audio: false,
     },

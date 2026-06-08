@@ -12,7 +12,10 @@ const DEFAULT_GEMINI_PROMPT =
   "Output image aspect ratio: 4:5. Do not crop the person — the full body must be visible from head to toe. Do not add any padding, borders or extra background.\n\nUsing the first image (model photo) as the base: preserve the person's face, body, pose, proportions, skin tone, hairstyle, background, lighting, and camera angle exactly as they are. Do not change anything about the person except the clothing.\n\nUsing the second image (clothing photo) as the clothing reference: replace only the clothing on the model with the clothing from the reference. The new clothing must fit the body naturally with realistic folds, shadows, fabric texture, and proper fit. The clothing color, print, and design must exactly match the reference.";
 
 const DEFAULT_SEEDANCE_PROMPT =
-  "Preserve the exact aspect ratio and framing of the input image — do not crop, zoom, or reframe. The entire person must remain fully visible throughout the video.\n\nDuration: 8 seconds. The video has two parts:\n\nPart 1 (first 4 seconds): The person walks straight forward toward the camera. No turning. Camera tracks smoothly from a fixed frontal angle. Medium full-body shot. Stable, no shake. Lighting unchanged.\n\nPart 2 (last 4 seconds): The person turns their back and walks away from the camera. No turning sideways. Camera tracks smoothly from a fixed rear angle. Same medium full-body shot. Stable, no shake. Same lighting and background.\n\nNo distortion. No extra limbs. No face changes. No clothing changes. No scale changes.";
+  "Preserve the exact aspect ratio and framing of the input image — do not crop, zoom, or reframe. The entire person must remain fully visible throughout the video.\n\nThe video has two parts:\n\nPart 1: The person walks straight forward toward the camera. No turning. Camera tracks smoothly from a fixed frontal angle. Medium full-body shot. Stable, no shake. Lighting unchanged.\n\nPart 2: The person turns their back and walks away from the camera. No turning sideways. Camera tracks smoothly from a fixed rear angle. Same medium full-body shot. Stable, no shake. Same lighting and background.\n\nNo distortion. No extra limbs. No face changes. No clothing changes. No scale changes.";
+
+const DURATION_OPTIONS = ["4","5","6","7","8","9","10","11","12","13","14","15"] as const;
+type DurationValue = typeof DURATION_OPTIONS[number];
 
 interface PhotoState {
   file: File | null;
@@ -42,6 +45,7 @@ export default function Home() {
   const [geminiResult, setGeminiResult] = useState<GeminiResult | null>(null);
 
   const [seedancePrompt, setSeedancePrompt] = useState(DEFAULT_SEEDANCE_PROMPT);
+  const [videoDuration, setVideoDuration] = useState<DurationValue>("8");
   const [seedanceLoading, setSeedanceLoading] = useState(false);
   const [seedanceError, setSeedanceError] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -67,6 +71,7 @@ export default function Home() {
     setGeminiPrompt(DEFAULT_GEMINI_PROMPT);
     setGeminiResult(null); setGeminiError(null);
     setSeedancePrompt(DEFAULT_SEEDANCE_PROMPT);
+    setVideoDuration("8");
     setSeedanceError(null); setVideoUrl(null); setYoutubeLink("");
   };
 
@@ -119,6 +124,7 @@ export default function Home() {
           frontImageUrl: geminiResult.frontUrl,
           backImageUrl: geminiResult.backUrl,
           prompt: seedancePrompt.trim(),
+          duration: videoDuration,
         }),
       });
       const data = await res.json();
@@ -405,6 +411,23 @@ export default function Home() {
                 disabled={seedanceLoading}
                 rows={6}
               />
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-gray-800">Тривалість відео</label>
+                <select
+                  value={videoDuration}
+                  onChange={(e) => setVideoDuration(e.target.value as DurationValue)}
+                  disabled={seedanceLoading}
+                  className="w-40 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 cursor-pointer disabled:opacity-40"
+                  style={{ outline: "none" }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = "#111"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(17,17,17,0.07)"; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.boxShadow = "none"; }}
+                >
+                  {DURATION_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{s} секунд</option>
+                  ))}
+                </select>
+              </div>
 
               {seedanceError && (
                 <div className="flex items-start gap-2.5 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">

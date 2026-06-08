@@ -7,7 +7,7 @@ export const maxDuration = 300;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { frontImageUrl, backImageUrl, prompt } = body;
+    const { frontImageUrl, backImageUrl, prompt, duration } = body;
 
     if (!frontImageUrl || !backImageUrl) {
       return NextResponse.json(
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await generateFitVideo({ frontImageUrl, backImageUrl, prompt });
+    const result = await generateFitVideo({ frontImageUrl, backImageUrl, prompt, duration: duration ?? "8" });
     return NextResponse.json({ videoUrl: result.videoUrl });
   } catch (error) {
     console.error("[seedance-video] Error:", error);
