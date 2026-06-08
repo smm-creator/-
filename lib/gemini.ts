@@ -4,7 +4,8 @@
  * Model: fal-ai/gemini-25-flash-image/edit
  * Docs:  https://fal.ai/models/fal-ai/gemini-25-flash-image/edit/api
  *
- * To switch to a different model, change FAL_IMAGE_MODEL below.
+ * Returns fal.ai CDN URLs (https://...) instead of base64 to keep
+ * response payloads small and avoid Vercel 4.5 MB body size limits.
  */
 
 import { fal } from "@fal-ai/client";
@@ -24,10 +25,8 @@ export interface TryOnInput {
 }
 
 export interface TryOnResult {
-  frontResultBase64: string;
-  backResultBase64: string;
-  frontMimeType: string;
-  backMimeType: string;
+  frontUrl: string;
+  backUrl: string;
 }
 
 function configureClient() {
@@ -44,17 +43,6 @@ function toDataUrl(base64: string, mimeType: string): string {
   return `data:${mimeType};base64,${base64}`;
 }
 
-async function urlToBase64(
-  url: string
-): Promise<{ base64: string; mimeType: string }> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Не вдалося завантажити результат: ${url}`);
-  const mimeType = res.headers.get("content-type") ?? "image/png";
-  const arrayBuffer = await res.arrayBuffer();
-  const base64 = Buffer.from(arrayBuffer).toString("base64");
-  return { base64, mimeType };
-}
-
 async function generateSingleTryOn(
   modelImageBase64: string,
   modelMimeType: string,
@@ -62,7 +50,7 @@ async function generateSingleTryOn(
   clothMimeType: string,
   prompt: string,
   side: "front" | "back"
-): Promise<{ base64: string; mimeType: string }> {
+): Promise<string> {
   const sideLabel = side === "front" ? "спереду" : "ззаду";
 
   const result = await fal.subscribe(FAL_IMAGE_MODEL, {
@@ -89,7 +77,7 @@ async function generateSingleTryOn(
     );
   }
 
-  return await urlToBase64(imageUrl);
+  return imageUrl;
 }
 
 export async function generateTryOnImages(
@@ -97,7 +85,7 @@ export async function generateTryOnImages(
 ): Promise<TryOnResult> {
   configureClient();
 
-  const [front, back] = await Promise.all([
+  const [frontUrl, backUrl] = await Promise.all([
     generateSingleTryOn(
       input.modelFrontBase64,
       input.modelFrontMimeType,
@@ -116,10 +104,5 @@ export async function generateTryOnImages(
     ),
   ]);
 
-  return {
-    frontResultBase64: front.base64,
-    backResultBase64: back.base64,
-    frontMimeType: front.mimeType,
-    backMimeType: back.mimeType,
-  };
+  return { frontUrl, backUrl };
 }

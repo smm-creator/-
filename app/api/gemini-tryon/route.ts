@@ -46,15 +46,13 @@ export async function POST(request: NextRequest) {
       prompt,
     });
 
+    // Return CDN URLs — much smaller than base64, avoids response size limits
     return NextResponse.json({
-      frontResult: result.frontResultBase64,
-      backResult: result.backResultBase64,
-      frontMimeType: result.frontMimeType,
-      backMimeType: result.backMimeType,
+      frontUrl: result.frontUrl,
+      backUrl: result.backUrl,
     });
   } catch (error) {
     console.error("[gemini-tryon] Error:", error);
-    const message = extractErrorMessage(error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: extractErrorMessage(error) }, { status: 500 });
   }
 }

@@ -7,12 +7,11 @@ export const maxDuration = 300;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const { frontImageUrl, backImageUrl, prompt } = body;
 
-    const { frontImageBase64, backImageBase64, frontMimeType, backMimeType, prompt } = body;
-
-    if (!frontImageBase64 || !backImageBase64) {
+    if (!frontImageUrl || !backImageUrl) {
       return NextResponse.json(
-        { error: "Необхідно надати обидва фото (спереду та ззаду)" },
+        { error: "Необхідно надати обидва URL фото (спереду та ззаду)" },
         { status: 400 }
       );
     }
@@ -24,18 +23,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await generateFitVideo({
-      frontImageBase64,
-      backImageBase64,
-      frontMimeType: frontMimeType ?? "image/png",
-      backMimeType: backMimeType ?? "image/png",
-      prompt,
-    });
-
+    const result = await generateFitVideo({ frontImageUrl, backImageUrl, prompt });
     return NextResponse.json({ videoUrl: result.videoUrl });
   } catch (error) {
     console.error("[seedance-video] Error:", error);
-    const message = extractErrorMessage(error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: extractErrorMessage(error) }, { status: 500 });
   }
 }

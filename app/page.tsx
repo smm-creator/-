@@ -20,10 +20,8 @@ interface PhotoState {
 }
 
 interface GeminiResult {
-  frontBase64: string;
-  backBase64: string;
-  frontMimeType: string;
-  backMimeType: string;
+  frontUrl: string;
+  backUrl: string;
 }
 
 const emptyPhoto = (): PhotoState => ({ file: null, previewUrl: null });
@@ -91,11 +89,7 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Помилка сервера");
-      setGeminiResult({
-        frontBase64: data.frontResult, backBase64: data.backResult,
-        frontMimeType: data.frontMimeType ?? "image/png",
-        backMimeType: data.backMimeType ?? "image/png",
-      });
+      setGeminiResult({ frontUrl: data.frontUrl, backUrl: data.backUrl });
     } catch (err) {
       setGeminiError(err instanceof Error ? err.message : "Невідома помилка");
     } finally {
@@ -111,10 +105,8 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          frontImageBase64: geminiResult.frontBase64,
-          backImageBase64: geminiResult.backBase64,
-          frontMimeType: geminiResult.frontMimeType,
-          backMimeType: geminiResult.backMimeType,
+          frontImageUrl: geminiResult.frontUrl,
+          backImageUrl: geminiResult.backUrl,
           prompt: seedancePrompt.trim(),
         }),
       });
@@ -356,8 +348,8 @@ export default function Home() {
               Результат — фото готові
             </p>
             <div className="grid grid-cols-2 gap-4">
-              <ImagePreview label="Спереду" base64={geminiResult.frontBase64} mimeType={geminiResult.frontMimeType} filename="fit-front.png" />
-              <ImagePreview label="Ззаду" base64={geminiResult.backBase64} mimeType={geminiResult.backMimeType} filename="fit-back.png" />
+              <ImagePreview label="Спереду" src={geminiResult.frontUrl} filename="fit-front.png" />
+              <ImagePreview label="Ззаду" src={geminiResult.backUrl} filename="fit-back.png" />
             </div>
           </div>
         )}
@@ -383,12 +375,12 @@ export default function Home() {
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Вхідні фото з Gemini</p>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { label: "Спереду", b64: geminiResult.frontBase64, mime: geminiResult.frontMimeType },
-                    { label: "Ззаду", b64: geminiResult.backBase64, mime: geminiResult.backMimeType },
+                    { label: "Спереду", url: geminiResult.frontUrl },
+                    { label: "Ззаду", url: geminiResult.backUrl },
                   ].map((item) => (
                     <div key={item.label} className="rounded-xl overflow-hidden border border-gray-200">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`data:${item.mime};base64,${item.b64}`} alt={item.label} className="w-full h-28 object-contain bg-gray-50" />
+                      <img src={item.url} alt={item.label} className="w-full h-28 object-contain bg-gray-50" />
                       <p className="text-xs text-gray-500 text-center py-1.5 border-t border-gray-100">{item.label}</p>
                     </div>
                   ))}
