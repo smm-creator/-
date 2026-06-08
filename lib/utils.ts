@@ -1,4 +1,4 @@
-export const MAX_FILE_SIZE_MB = 10;
+export const MAX_FILE_SIZE_MB = 4;
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 export const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -22,6 +22,44 @@ export function fileToBase64(file: File): Promise<string> {
     };
     reader.onerror = () => reject(new Error("Помилка читання файлу"));
     reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Compresses an image file to a target max dimension and quality.
+ * Reduces large photos before sending to the API to stay under Vercel's
+ * 4.5 MB request body limit (4 photos × ~1 MB each).
+ */
+export function compressImage(
+  file: File,
+  maxDim = 1280,
+  quality = 0.88
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+      resolve(dataUrl.split(",")[1]);
+    };
+    img.onerror = () => reject(new Error("Помилка обробки зображення"));
+    img.src = url;
   });
 }
 

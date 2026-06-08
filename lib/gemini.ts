@@ -50,7 +50,8 @@ function toDataUrl(base64: string, mimeType: string): string {
 async function urlToBase64(url: string): Promise<{ base64: string; mimeType: string }> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Не вдалося завантажити результат: ${url}`);
-  const mimeType = res.headers.get("content-type") ?? "image/png";
+  // Strip "; charset=..." or other params from content-type
+  const mimeType = (res.headers.get("content-type") ?? "image/png").split(";")[0].trim();
   const arrayBuffer = await res.arrayBuffer();
   const base64 = Buffer.from(arrayBuffer).toString("base64");
   return { base64, mimeType };

@@ -6,7 +6,7 @@ import ImagePreview from "@/components/ImagePreview";
 import PromptBox from "@/components/PromptBox";
 import StepCard from "@/components/StepCard";
 import VideoPreview from "@/components/VideoPreview";
-import { fileToBase64, cn } from "@/lib/utils";
+import { compressImage, cn } from "@/lib/utils";
 
 const DEFAULT_GEMINI_PROMPT =
   "Output image aspect ratio: 4:5. Do not crop the person — the full body must be visible from head to toe. Do not add any padding, borders or extra background.\n\nUsing the first image (model photo) as the base: preserve the person's face, body, pose, proportions, skin tone, hairstyle, background, lighting, and camera angle exactly as they are. Do not change anything about the person except the clothing.\n\nUsing the second image (clothing photo) as the clothing reference: replace only the clothing on the model with the clothing from the reference. The new clothing must fit the body naturally with realistic folds, shadows, fabric texture, and proper fit. The clothing color, print, and design must exactly match the reference.";
@@ -80,8 +80,10 @@ export default function Home() {
     setGeminiLoading(true); setGeminiError(null); setGeminiResult(null);
     try {
       const [mfB64, mbB64, cfB64, cbB64] = await Promise.all([
-        fileToBase64(modelFront.file!), fileToBase64(modelBack.file!),
-        fileToBase64(clothFront.file!), fileToBase64(clothBack.file!),
+        compressImage(modelFront.file!),
+        compressImage(modelBack.file!),
+        compressImage(clothFront.file!),
+        compressImage(clothBack.file!),
       ]);
       const res = await fetch("/api/gemini-tryon", {
         method: "POST",
@@ -89,10 +91,10 @@ export default function Home() {
         body: JSON.stringify({
           modelFrontBase64: mfB64, modelBackBase64: mbB64,
           clothFrontBase64: cfB64, clothBackBase64: cbB64,
-          modelFrontMimeType: modelFront.file!.type,
-          modelBackMimeType: modelBack.file!.type,
-          clothFrontMimeType: clothFront.file!.type,
-          clothBackMimeType: clothBack.file!.type,
+          modelFrontMimeType: "image/jpeg",
+          modelBackMimeType: "image/jpeg",
+          clothFrontMimeType: "image/jpeg",
+          clothBackMimeType: "image/jpeg",
           prompt: geminiPrompt.trim(),
         }),
       });
