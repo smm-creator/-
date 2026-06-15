@@ -98,7 +98,11 @@ export default function Home() {
           prompt: geminiPrompt.trim(),
         }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data: Record<string, string>;
+      try { data = JSON.parse(text); } catch {
+        throw new Error(res.status === 504 ? "Тайм-аут сервера. Спробуйте ще раз." : `Помилка сервера (${res.status})`);
+      }
       if (!res.ok) throw new Error(data.error ?? "Помилка сервера");
       setGeminiResult({
         frontBase64: data.frontResult,
@@ -129,7 +133,15 @@ export default function Home() {
           duration: videoDuration,
         }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data: Record<string, string>;
+      try { data = JSON.parse(text); } catch {
+        throw new Error(
+          res.status === 504
+            ? "Тайм-аут сервера. Відео генерується довго — спробуйте меншу тривалість (8–10 сек)."
+            : `Помилка сервера (${res.status}). Спробуйте ще раз.`
+        );
+      }
       if (!res.ok) throw new Error(data.error ?? "Помилка сервера");
       setVideoUrl(data.videoUrl);
     } catch (err) {
