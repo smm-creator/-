@@ -5,11 +5,12 @@ import { downloadFromUrl, copyToClipboard } from "@/lib/utils";
 
 interface VideoPreviewProps {
   videoUrl: string;
+  label?: string;
   youtubeLink: string;
   onYoutubeLinkChange: (value: string) => void;
 }
 
-export default function VideoPreview({ videoUrl, youtubeLink, onYoutubeLinkChange }: VideoPreviewProps) {
+export default function VideoPreview({ videoUrl, label = "Готове відео", youtubeLink, onYoutubeLinkChange }: VideoPreviewProps) {
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
@@ -33,7 +34,7 @@ export default function VideoPreview({ videoUrl, youtubeLink, onYoutubeLinkChang
               <polygon points="5 3 19 12 5 21 5 3" />
             </svg>
           </div>
-          <span className="text-sm font-semibold text-gray-800">Готове відео</span>
+          <span className="text-sm font-semibold text-gray-800">{label}</span>
         </div>
         <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Готово</span>
       </div>

@@ -11,8 +11,11 @@ import { compressImage, cn } from "@/lib/utils";
 const DEFAULT_GEMINI_PROMPT =
   "Output image aspect ratio: 4:5. Do not crop the person — the full body must be visible from head to toe. Do not add any padding, borders or extra background.\n\nUsing the first image (model photo) as the base: preserve the person's face, body, pose, proportions, skin tone, hairstyle, background, lighting, and camera angle exactly as they are. Do not change anything about the person except the clothing.\n\nUsing the second image (clothing photo) as the clothing reference: replace only the clothing on the model with the clothing from the reference. The new clothing must fit the body naturally with realistic folds, shadows, fabric texture, and proper fit. The clothing color, print, and design must exactly match the reference.";
 
-const DEFAULT_SEEDANCE_PROMPT =
-  "A person walks straight forward toward the camera in a straight line. The person does not turn or change direction. The camera moves smoothly, tracking the person, maintaining a constant frontal view. The subject takes several steps, then stops. The camera also stops. Cinematic, stable shot, no camera shake, smooth, centered composition, medium shot. The frame only shows the lower part of the body, the angle does not change. the lighting remains unchanged\nThen a person turns his back and walks back\nA person walks straight away from the camera. The person doesn't turn or change direction. The camera moves smoothly, tracking the person and maintaining a constant view from behind. The subject takes a few steps, then stops. The camera also stops. Cinematic, stable shot, no camera shake, smooth, centered composition, medium shot. The frame only shows the lower part of the body, the angle does not change. the lighting and background remains unchanged";
+const DEFAULT_FRONT_PROMPT =
+  "A person walks straight forward toward the camera in a straight line. The person does not turn or change direction. The camera moves smoothly, tracking the person, maintaining a constant frontal view. The subject takes several steps, then stops. The camera also stops. Cinematic, stable shot, no camera shake, smooth, centered composition, medium shot. The frame only shows the lower part of the body, the angle does not change. The lighting remains unchanged.";
+
+const DEFAULT_BACK_PROMPT =
+  "A person walks straight away from the camera. The person does not turn or change direction. The camera moves smoothly, tracking the person and maintaining a constant view from behind. The subject takes a few steps, then stops. The camera also stops. Cinematic, stable shot, no camera shake, smooth, centered composition, medium shot. The frame only shows the lower part of the body, the angle does not change. The lighting and background remain unchanged.";
 
 const DURATION_OPTIONS = ["4","5","6","7","8","9","10","11","12","13","14","15"] as const;
 type DurationValue = typeof DURATION_OPTIONS[number];
@@ -44,12 +47,15 @@ export default function Home() {
   const [geminiError, setGeminiError] = useState<string | null>(null);
   const [geminiResult, setGeminiResult] = useState<GeminiResult | null>(null);
 
-  const [seedancePrompt, setSeedancePrompt] = useState(DEFAULT_SEEDANCE_PROMPT);
+  const [frontVideoPrompt, setFrontVideoPrompt] = useState(DEFAULT_FRONT_PROMPT);
+  const [backVideoPrompt, setBackVideoPrompt] = useState(DEFAULT_BACK_PROMPT);
   const [videoDuration, setVideoDuration] = useState<DurationValue>("8");
   const [seedanceLoading, setSeedanceLoading] = useState(false);
   const [seedanceError, setSeedanceError] = useState<string | null>(null);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [youtubeLink, setYoutubeLink] = useState("");
+  const [frontVideoUrl, setFrontVideoUrl] = useState<string | null>(null);
+  const [backVideoUrl, setBackVideoUrl] = useState<string | null>(null);
+  const [frontYoutubeLink, setFrontYoutubeLink] = useState("");
+  const [backYoutubeLink, setBackYoutubeLink] = useState("");
 
   const allPhotosUploaded = !!modelFront.file && !!modelBack.file && !!clothFront.file && !!clothBack.file;
 
@@ -70,9 +76,12 @@ export default function Home() {
     setClothFront(emptyPhoto()); setClothBack(emptyPhoto());
     setGeminiPrompt(DEFAULT_GEMINI_PROMPT);
     setGeminiResult(null); setGeminiError(null);
-    setSeedancePrompt(DEFAULT_SEEDANCE_PROMPT);
+    setFrontVideoPrompt(DEFAULT_FRONT_PROMPT);
+    setBackVideoPrompt(DEFAULT_BACK_PROMPT);
     setVideoDuration("8");
-    setSeedanceError(null); setVideoUrl(null); setYoutubeLink("");
+    setSeedanceError(null);
+    setFrontVideoUrl(null); setBackVideoUrl(null);
+    setFrontYoutubeLink(""); setBackYoutubeLink("");
   };
 
   const handleGenerateGemini = async () => {
@@ -119,31 +128,36 @@ export default function Home() {
     }
   };
 
+  const callSeedance = async (imageUrl: string, prompt: string): Promise<string> => {
+    const res = await fetch("/api/seedance-video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ frontImageUrl: imageUrl, backImageUrl: imageUrl, prompt, duration: videoDuration }),
+    });
+    const text = await res.text();
+    let data: Record<string, string>;
+    try { data = JSON.parse(text); } catch {
+      throw new Error(
+        res.status === 504
+          ? "Тайм-аут сервера. Спробуйте меншу тривалість (8 сек)."
+          : `Помилка сервера (${res.status}). Спробуйте ще раз.`
+      );
+    }
+    if (!res.ok) throw new Error(data.error ?? "Помилка сервера");
+    return data.videoUrl;
+  };
+
   const handleGenerateSeedance = async () => {
-    if (!geminiResult || !seedancePrompt.trim()) return;
-    setSeedanceLoading(true); setSeedanceError(null); setVideoUrl(null);
+    if (!geminiResult) return;
+    setSeedanceLoading(true); setSeedanceError(null);
+    setFrontVideoUrl(null); setBackVideoUrl(null);
     try {
-      const res = await fetch("/api/seedance-video", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          frontImageUrl: geminiResult.frontUrl,
-          backImageUrl: geminiResult.backUrl,
-          prompt: seedancePrompt.trim(),
-          duration: videoDuration,
-        }),
-      });
-      const text = await res.text();
-      let data: Record<string, string>;
-      try { data = JSON.parse(text); } catch {
-        throw new Error(
-          res.status === 504
-            ? "Тайм-аут сервера. Відео генерується довго — спробуйте меншу тривалість (8–10 сек)."
-            : `Помилка сервера (${res.status}). Спробуйте ще раз.`
-        );
-      }
-      if (!res.ok) throw new Error(data.error ?? "Помилка сервера");
-      setVideoUrl(data.videoUrl);
+      const [fUrl, bUrl] = await Promise.all([
+        callSeedance(geminiResult.frontUrl, frontVideoPrompt.trim()),
+        callSeedance(geminiResult.backUrl, backVideoPrompt.trim()),
+      ]);
+      setFrontVideoUrl(fUrl);
+      setBackVideoUrl(bUrl);
     } catch (err) {
       setSeedanceError(err instanceof Error ? err.message : "Невідома помилка");
     } finally {
@@ -151,7 +165,8 @@ export default function Home() {
     }
   };
 
-  const progressStep = videoUrl ? 4 : geminiResult ? 3 : geminiLoading ? 2 : 1;
+  const videosReady = !!(frontVideoUrl && backVideoUrl);
+  const progressStep = videosReady ? 4 : geminiResult ? 3 : geminiLoading ? 2 : 1;
 
   return (
     <div className="min-h-screen bg-white">
@@ -347,7 +362,7 @@ export default function Home() {
               {geminiResult && (
                 <button
                   type="button"
-                  onClick={() => { setGeminiResult(null); setVideoUrl(null); setSeedanceError(null); }}
+                  onClick={() => { setGeminiResult(null); setFrontVideoUrl(null); setBackVideoUrl(null); setSeedanceError(null); }}
                   className="px-4 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-900 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   Повторити
@@ -389,127 +404,153 @@ export default function Home() {
         <StepCard
           stepNumber={2}
           title="Генерація відео"
-          subtitle="Seedance 2.0 — анімація двох фото у відео"
-          isActive={!!geminiResult && !videoUrl}
-          isCompleted={!!videoUrl}
+          subtitle="Seedance 2.0 — два окремих відео: спереду і ззаду"
+          isActive={!!geminiResult && !videosReady}
+          isCompleted={videosReady}
         >
           <div className="flex flex-col gap-6">
 
-              {geminiResult ? (
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Вхідні фото з Gemini</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { label: "Спереду", b64: geminiResult.frontBase64, mime: geminiResult.frontMimeType },
-                      { label: "Ззаду", b64: geminiResult.backBase64, mime: geminiResult.backMimeType },
-                    ].map((item) => (
-                      <div key={item.label} className="rounded-xl overflow-hidden border border-gray-200">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`data:${item.mime};base64,${item.b64}`} alt={item.label} className="w-full h-28 object-contain bg-gray-50" />
-                        <p className="text-xs text-gray-500 text-center py-1.5 border-t border-gray-100">{item.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-xs text-gray-400">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-                  </svg>
-                  Фото з'являться тут після завершення Кроку 1
-                </div>
-              )}
-
-              <PromptBox
-                label="Промпт для Seedance 2.0"
-                value={seedancePrompt}
-                onChange={setSeedancePrompt}
-                disabled={seedanceLoading}
-                rows={6}
-              />
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-gray-800">Тривалість відео</label>
-                <select
-                  value={videoDuration}
-                  onChange={(e) => setVideoDuration(e.target.value as DurationValue)}
-                  disabled={seedanceLoading}
-                  className="w-40 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 cursor-pointer disabled:opacity-40"
-                  style={{ outline: "none" }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = "#111"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(17,17,17,0.07)"; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.boxShadow = "none"; }}
-                >
-                  {DURATION_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s} секунд</option>
+            {/* Input photos */}
+            {geminiResult ? (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Вхідні фото з Gemini</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "Спереду", b64: geminiResult.frontBase64, mime: geminiResult.frontMimeType },
+                    { label: "Ззаду", b64: geminiResult.backBase64, mime: geminiResult.backMimeType },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-xl overflow-hidden border border-gray-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`data:${item.mime};base64,${item.b64}`} alt={item.label} className="w-full h-28 object-contain bg-gray-50" />
+                      <p className="text-xs text-gray-500 text-center py-1.5 border-t border-gray-100">{item.label}</p>
+                    </div>
                   ))}
-                </select>
-              </div>
-
-              {seedanceError && (
-                <div className="flex items-start gap-2.5 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 mt-0.5">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                    <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-                  </svg>
-                  {seedanceError}
                 </div>
-              )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-xs text-gray-400">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                Фото з'являться тут після завершення Кроку 1
+              </div>
+            )}
 
-              <div className="flex items-center gap-3">
+            {/* Two prompts side by side */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <PromptBox
+                label="Промпт — відео спереду"
+                value={frontVideoPrompt}
+                onChange={setFrontVideoPrompt}
+                disabled={seedanceLoading}
+                rows={7}
+              />
+              <PromptBox
+                label="Промпт — відео ззаду"
+                value={backVideoPrompt}
+                onChange={setBackVideoPrompt}
+                disabled={seedanceLoading}
+                rows={7}
+              />
+            </div>
+
+            {/* Duration */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-gray-800">Тривалість кожного відео</label>
+              <select
+                value={videoDuration}
+                onChange={(e) => setVideoDuration(e.target.value as DurationValue)}
+                disabled={seedanceLoading}
+                className="w-40 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 cursor-pointer disabled:opacity-40"
+                style={{ outline: "none" }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = "#111"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(17,17,17,0.07)"; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.boxShadow = "none"; }}
+              >
+                {DURATION_OPTIONS.map((s) => (
+                  <option key={s} value={s}>{s} секунд</option>
+                ))}
+              </select>
+            </div>
+
+            {seedanceError && (
+              <div className="flex items-start gap-2.5 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 mt-0.5">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                {seedanceError}
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleGenerateSeedance}
+                disabled={!geminiResult || seedanceLoading}
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-gray-900 text-white rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-30"
+              >
+                {seedanceLoading ? (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
+                      <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" opacity="0.2" />
+                      <path d="M21 12a9 9 0 0 1-9 9" />
+                    </svg>
+                    Генеруємо 2 відео...
+                  </>
+                ) : (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                    Згенерувати 2 відео
+                  </>
+                )}
+              </button>
+              {videosReady && (
                 <button
                   type="button"
-                  onClick={handleGenerateSeedance}
-                  disabled={!geminiResult || seedanceLoading || !seedancePrompt.trim()}
-                  className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-gray-900 text-white rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-30"
+                  onClick={() => { setFrontVideoUrl(null); setBackVideoUrl(null); setSeedanceError(null); setFrontYoutubeLink(""); setBackYoutubeLink(""); }}
+                  className="px-4 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-900 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
                 >
-                  {seedanceLoading ? (
-                    <>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
-                        <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" opacity="0.2" />
-                        <path d="M21 12a9 9 0 0 1-9 9" />
-                      </svg>
-                      Генеруємо відео...
-                    </>
-                  ) : (
-                    <>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <polygon points="5 3 19 12 5 21 5 3" />
-                      </svg>
-                      Згенерувати відео
-                    </>
-                  )}
+                  Повторити
                 </button>
-                {videoUrl && (
-                  <button
-                    type="button"
-                    onClick={() => { setVideoUrl(null); setSeedanceError(null); setYoutubeLink(""); }}
-                    className="px-4 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-900 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-                  >
-                    Повторити
-                  </button>
-                )}
-              </div>
-
-              {seedanceLoading && (
-                <div className="flex flex-col items-center gap-3 py-10 rounded-xl bg-gray-50 border border-gray-100">
-                  <div className="flex gap-1.5">
-                    {[0, 1, 2, 3].map((i) => (
-                      <div key={i} className="w-2 h-2 rounded-full bg-gray-400 animate-pulse-dot" style={{ animationDelay: `${i * 0.2}s` }} />
-                    ))}
-                  </div>
-                  <p className="text-sm text-gray-500 font-medium">Seedance генерує відео...</p>
-                  <p className="text-xs text-gray-400 text-center max-w-xs">Зазвичай займає 2–5 хвилин. Не закривайте сторінку.</p>
-                </div>
-              )}
-
-              {videoUrl && (
-                <VideoPreview
-                  videoUrl={videoUrl}
-                  youtubeLink={youtubeLink}
-                  onYoutubeLinkChange={setYoutubeLink}
-                />
               )}
             </div>
+
+            {seedanceLoading && (
+              <div className="flex flex-col items-center gap-3 py-10 rounded-xl bg-gray-50 border border-gray-100">
+                <div className="flex gap-1.5">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="w-2 h-2 rounded-full bg-gray-400 animate-pulse-dot" style={{ animationDelay: `${i * 0.2}s` }} />
+                  ))}
+                </div>
+                <p className="text-sm text-gray-500 font-medium">Seedance генерує 2 відео паралельно...</p>
+                <p className="text-xs text-gray-400 text-center max-w-xs">Зазвичай займає 2–5 хвилин. Не закривайте сторінку.</p>
+              </div>
+            )}
+
+            {/* Two video results */}
+            {(frontVideoUrl || backVideoUrl) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {frontVideoUrl && (
+                  <VideoPreview
+                    videoUrl={frontVideoUrl}
+                    label="Відео спереду"
+                    youtubeLink={frontYoutubeLink}
+                    onYoutubeLinkChange={setFrontYoutubeLink}
+                  />
+                )}
+                {backVideoUrl && (
+                  <VideoPreview
+                    videoUrl={backVideoUrl}
+                    label="Відео ззаду"
+                    youtubeLink={backYoutubeLink}
+                    onYoutubeLinkChange={setBackYoutubeLink}
+                  />
+                )}
+              </div>
+            )}
+          </div>
         </StepCard>
       </main>
 
