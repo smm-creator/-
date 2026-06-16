@@ -12,10 +12,10 @@ const DEFAULT_GEMINI_PROMPT =
   "This is a virtual clothing try-on task.\n\nIMAGE 1 = model photo. IMAGE 2 = clothing item to wear.\n\nTask: Redress the model from IMAGE 1 in the clothing from IMAGE 2.\n\nDo NOT change:\n- The model's face, hair, skin tone, body shape, pose, proportions\n- The background, lighting, shadows, camera angle\n\nDo CHANGE:\n- Remove ALL existing clothing from the model completely\n- Dress the model in the EXACT clothing shown in IMAGE 2\n- Reproduce the clothing's color, print, pattern, graphic, logo, text, and fabric texture with full accuracy — do not simplify or omit any detail\n- The clothing must sit naturally on the body with realistic fit, drape, and folds\n\nOutput: full body visible from head to toe, aspect ratio 4:5, no cropping.";
 
 const DEFAULT_FRONT_PROMPT =
-  "Fashion video. The model walks forward toward the camera at a steady natural pace, then turns around to face away. No slowing down. Camera is fixed. Lighting, colors and background unchanged. Full-body shot, centered.";
+  "Fashion video, single continuous shot. The model walks forward toward the camera at a steady natural pace for a few steps, then smoothly turns around to face away from the camera, and stops completely still at the end. The last 1 second of the video the model is standing still facing away — this is important for clean editing. Camera is completely fixed, no movement. Lighting, exposure and background are identical to the input image throughout.";
 
 const DEFAULT_BACK_PROMPT =
-  "Fashion video. The model is already facing away from the camera and walks away at a steady natural pace. No turning. Camera is fixed. Lighting, colors and background unchanged. Full-body shot, centered.";
+  "Fashion video, single continuous shot. The video starts with the model already standing still facing away from the camera — hold still for 1 second at the start. Then the model walks away from the camera at a steady natural pace for a few steps and stops. No turning at any point. Camera is completely fixed, no movement. Lighting, exposure and background are identical to the input image throughout.";
 
 const DURATION_OPTIONS = ["4","5","6","7","8","9","10","11","12","13","14","15"] as const;
 type DurationValue = typeof DURATION_OPTIONS[number];
