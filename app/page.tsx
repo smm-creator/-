@@ -12,10 +12,10 @@ const DEFAULT_GEMINI_PROMPT =
   "This is a virtual clothing try-on task.\n\nIMAGE 1 = model photo. IMAGE 2 = clothing item to wear.\n\nTask: Redress the model from IMAGE 1 in the clothing from IMAGE 2.\n\nDo NOT change:\n- The model's face, hair, skin tone, body shape, pose, proportions\n- The background, lighting, shadows, camera angle\n\nDo CHANGE:\n- Remove ALL existing clothing from the model completely\n- Dress the model in the EXACT clothing shown in IMAGE 2\n- Reproduce the clothing's color, print, pattern, graphic, logo, text, and fabric texture with full accuracy — do not simplify or omit any detail\n- The clothing must sit naturally on the body with realistic fit, drape, and folds\n\nOutput: full body visible from head to toe, aspect ratio 4:5, no cropping.";
 
 const DEFAULT_FRONT_PROMPT =
-  "Fashion runway video. The model starts facing the camera and walks forward toward it with natural, fluid, confident steps. After a few steps the model slows down and smoothly turns around to face away from the camera. The video ends with the model standing still, facing away. Camera is fixed, no movement. Lighting, colors, and background stay exactly as in the input image — no darkening, no color shift. Full-body shot, centered, smooth motion throughout.";
+  "Fashion video. The model walks forward toward the camera at a steady natural pace, then turns around to face away. No slowing down. Camera is fixed. Lighting, colors and background unchanged. Full-body shot, centered.";
 
 const DEFAULT_BACK_PROMPT =
-  "Fashion runway video. The model starts already facing away from the camera (back view). The model walks naturally and smoothly away from the camera with confident, fluid steps, then slows down and stops. Camera is fixed, no movement. Lighting, colors, and background stay exactly as in the input image — no darkening, no color shift. Full-body shot, centered, smooth motion throughout.";
+  "Fashion video. The model is already facing away from the camera and walks away at a steady natural pace. No turning. Camera is fixed. Lighting, colors and background unchanged. Full-body shot, centered.";
 
 const DURATION_OPTIONS = ["4","5","6","7","8","9","10","11","12","13","14","15"] as const;
 type DurationValue = typeof DURATION_OPTIONS[number];
