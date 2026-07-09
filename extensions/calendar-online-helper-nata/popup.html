@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Calendar.online Helper</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Ната — задачі на день</h1>
+      <a href="options.html" target="_blank" class="settings-link" title="Налаштування">⚙</a>
+    </header>
+
+    <section class="field">
+      <label for="date">Дата</label>
+      <input id="date" type="date" />
+    </section>
+
+    <section class="field">
+      <label for="person">Для кого</label>
+      <select id="person"></select>
+    </section>
+
+    <section class="field">
+      <label>Задачі</label>
+      <div id="presets" class="presets"></div>
+    </section>
+
+    <section class="field">
+      <label for="custom">Своя задача</label>
+      <input id="custom" type="text" placeholder="Введіть назву..." />
+    </section>
+
+    <button id="submit" type="button">Додати</button>
+
+    <p id="status" class="status" aria-live="polite"></p>
+
+    <script src="api.js"></script>
+    <script src="storage.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

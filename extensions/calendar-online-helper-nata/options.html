@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Налаштування — Calendar.online Helper</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Налаштування</h1>
+
+      <label for="capabilityId">Посилання календаря (ID з URL)</label>
+      <input
+        id="capabilityId"
+        type="text"
+        placeholder="93db73458eb6edaca115"
+      />
+      <p class="hint">
+        З URL: https://calendar.online/<strong>93db73458eb6edaca115</strong>
+      </p>
+
+      <label for="subCalendarId">Людина за замовчуванням (ID)</label>
+      <input id="subCalendarId" type="number" placeholder="3440917" />
+      <p class="hint">3440917 = Ната</p>
+
+      <label for="timeZone">Часовий пояс</label>
+      <input id="timeZone" type="text" placeholder="Europe/Kiev" />
+
+      <label for="presets">Пресети задач (по одному на рядок)</label>
+      <textarea id="presets" rows="10"></textarea>
+
+      <button id="save" type="button">Зберегти</button>
+      <p id="status" class="status"></p>
+    </main>
+
+    <script src="storage.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>
